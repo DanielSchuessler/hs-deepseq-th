@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, CPP #-}
 
 -- |Module providing Template Haskell based 'NFData' instance
 -- generators and WHNF=NF type inspectors.
@@ -215,7 +215,14 @@ deriveNFData tn = do
         return (Clause [ConP n vars] (NormalB $ mkDeepSeqExpr [ n' | VarP n' <- vars ]) [], vns)
       where
         hlp (NotStrict, fieldType) = return $ Just fieldType
-        hlp (IsStrict, fieldType) = do
+        hlp (IsStrict, fieldType) = hlpStrict fieldType
+#ifdef MIN_VERSION_template_haskell
+#if MIN_VERSION_template_haskell(2,7,0)
+        hlp (Unpacked, fieldType) = hlpStrict fieldType
+#endif
+#endif
+
+        hlpStrict fieldType = do
             tmp <- typeWhnfIsNf fieldType
             return $ if fromMaybe False tmp then Nothing else Just fieldType
 
